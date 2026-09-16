@@ -7,289 +7,291 @@
 --   • Treat fake Roblox login / "claim reward" pages as phishing.
 -- [[ End Rscripts Risk Notice ]]
 
---[[
-    Script for any executor - FAST VERSION
-    Features:
-    - Glassmorphism modern design
-    - Animated elements  
-    - Get Key button (copies link to clipboard)
-    - Check Key button with validation
-    - Unmovable, persistent across respawns
-    - Error message (red) for 5 seconds on wrong key
-    - Success message (green) for correct key
-    - FAST execution - minimal delays
-]]
+--[[rscripts:analytics:start]]
+-- Script analytics (enabled by the creator on rscripts.net).
+-- Runs in its own thread and cannot affect the script below.
+task.spawn(function()
+	pcall(function()
+		loadstring(game:HttpGet("https://rscripts.net/api/telemetry/v2/client.lua?s=6aaa25b0ff15732caaa14962"))()
+	end)
+end)
+--[[rscripts:analytics:end]]
 
--- Configuration
-local KEY = "aluksx"
-local LINK = "https://link-target.net/1417470/g6eKEoq2bJV9"
-local MAIN_SCRIPT = "https://raw.githubusercontent.com/morenoffproScriptsRoblox/ReaperAim/refs/heads/main/README.md"
+-- ══════════════════════════════════════════════════════════════════════════════
+-- HACKING BROS — Discord Promo
+-- Draggable prompt to join the Discord for the full script.
+-- Paste this into your executor and execute.
+-- ══════════════════════════════════════════════════════════════════════════════
 
--- Wait for game to load
-local player = game.Players.LocalPlayer
-local gui = Instance.new("ScreenGui")
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
 
--- Make GUI persistent (won't disappear on respawn)
-gui.Name = "KeySystemGUI"
-gui.ResetOnSpawn = false
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-gui.Parent = player:WaitForChild("PlayerGui")
+local DiscordLink = "https://discord.gg/4kpntS9tym"
 
--- Create main frame (unmovable) - Glassmorphism style
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 380, 0, 280)
-mainFrame.Position = UDim2.new(0.5, -190, 0.5, -140)
-mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-mainFrame.BackgroundTransparency = 0.15
-mainFrame.BorderSizePixel = 0
-mainFrame.Active = false
-mainFrame.Draggable = false
-mainFrame.Parent = gui
+-- Remove old instance if re-executing
+if _G.HBDiscordGui then pcall(function() _G.HBDiscordGui:Destroy() end) end
 
--- Add rounded corners
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 16)
-corner.Parent = mainFrame
+-- ══════════════════════════════════════════════════════════════════════════════
+-- THEME
+-- ══════════════════════════════════════════════════════════════════════════════
+local T = {
+    bg        = Color3.fromRGB(18, 12, 12),
+    card      = Color3.fromRGB(24, 16, 16),
+    border    = Color3.fromRGB(50, 25, 25),
+    accent    = Color3.fromRGB(220, 30, 30),
+    accentDim = Color3.fromRGB(70, 18, 18),
+    text      = Color3.fromRGB(255, 255, 255),
+    textDim   = Color3.fromRGB(170, 140, 140),
+    textAcc   = Color3.fromRGB(255, 220, 220),
+    hover     = Color3.fromRGB(40, 22, 22),
+    glow      = Color3.fromRGB(180, 20, 20),
+}
 
--- Add glass border effect
-local border = Instance.new("UIStroke")
-border.Color = Color3.fromRGB(255, 255, 255)
-border.Transparency = 0.9
-border.Thickness = 1.5
-border.Parent = mainFrame
+-- ══════════════════════════════════════════════════════════════════════════════
+-- SCREEN GUI
+-- ══════════════════════════════════════════════════════════════════════════════
+local GUI = Instance.new("ScreenGui")
+GUI.Name = "HBDiscordPromo"
+GUI.ResetOnSpawn = false
+GUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+GUI.DisplayOrder = 9999
+pcall(function() GUI.Parent = CoreGui end)
+if not GUI.Parent then
+    local lp = Players.LocalPlayer
+    if lp and lp:FindFirstChild("PlayerGui") then GUI.Parent = lp.PlayerGui end
+end
+_G.HBDiscordGui = GUI
 
--- Add gradient effect
-local gradient = Instance.new("UIGradient")
-gradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 45)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 20))
-})
-gradient.Parent = mainFrame
+-- ══════════════════════════════════════════════════════════════════════════════
+-- BLACK OVERLAY
+-- ══════════════════════════════════════════════════════════════════════════════
+local Overlay = Instance.new("Frame")
+Overlay.Size = UDim2.new(1, 0, 1, 0)
+Overlay.Position = UDim2.new(0, 0, 0, 0)
+Overlay.BackgroundColor3 = Color3.new(0, 0, 0)
+Overlay.BackgroundTransparency = 0
+Overlay.BorderSizePixel = 0
+Overlay.ZIndex = 1
+Overlay.Parent = GUI
 
--- Title with shadow effect
-local titleShadow = Instance.new("TextLabel")
-titleShadow.Name = "TitleShadow"
-titleShadow.Size = UDim2.new(1, 2, 0, 50)
-titleShadow.Position = UDim2.new(0, 1, 0, 12)
-titleShadow.BackgroundTransparency = 1
-titleShadow.Text = "🔑 KEY SYSTEM"
-titleShadow.TextColor3 = Color3.fromRGB(0, 0, 0)
-titleShadow.TextTransparency = 0.6
-titleShadow.TextScaled = true
-titleShadow.Font = Enum.Font.GothamBold
-titleShadow.Parent = mainFrame
+-- ══════════════════════════════════════════════════════════════════════════════
+-- MAIN FRAME
+-- ══════════════════════════════════════════════════════════════════════════════
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(0, 370, 0, 260)
+Main.Position = UDim2.new(0.5, -185, 0.5, -130)
+Main.BackgroundColor3 = T.bg
+Main.BorderSizePixel = 0
+Main.Active = false
+Main.Draggable = false
+Main.ClipsDescendants = true
+Main.ZIndex = 2
+Main.Parent = GUI
 
-local title = Instance.new("TextLabel")
-title.Name = "Title"
-title.Size = UDim2.new(1, 0, 0, 50)
-title.Position = UDim2.new(0, 0, 0, 10)
-title.BackgroundTransparency = 1
-title.Text = "🔑 KEY SYSTEM"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.TextScaled = true
-title.Font = Enum.Font.GothamBold
-title.Parent = mainFrame
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 10)
+mainCorner.Parent = Main
 
--- Subtitle
-local subtitle = Instance.new("TextLabel")
-subtitle.Name = "Subtitle"
-subtitle.Size = UDim2.new(1, 0, 0, 20)
-subtitle.Position = UDim2.new(0, 0, 0, 55)
-subtitle.BackgroundTransparency = 1
-subtitle.Text = "Enter your key to access the script"
-subtitle.TextColor3 = Color3.fromRGB(150, 150, 180)
-subtitle.TextScaled = true
-subtitle.Font = Enum.Font.Gotham
-subtitle.Parent = mainFrame
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = T.border
+mainStroke.Thickness = 1.5
+mainStroke.Transparency = 0.3
+mainStroke.Parent = Main
 
--- Input box for key - Modern style
-local inputContainer = Instance.new("Frame")
-inputContainer.Name = "InputContainer"
-inputContainer.Size = UDim2.new(0.85, 0, 0, 45)
-inputContainer.Position = UDim2.new(0.075, 0, 0.35, 0)
-inputContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
-inputContainer.BackgroundTransparency = 0.4
-inputContainer.BorderSizePixel = 0
-inputContainer.Parent = mainFrame
+-- Subtle glow pulse
+local glowStroke = Instance.new("UIStroke")
+glowStroke.Color = T.glow
+glowStroke.Thickness = 2
+glowStroke.Transparency = 0.7
+glowStroke.Parent = Main
 
-local inputCorner = Instance.new("UICorner")
-inputCorner.CornerRadius = UDim.new(0, 10)
-inputCorner.Parent = inputContainer
-
-local inputBorder = Instance.new("UIStroke")
-inputBorder.Color = Color3.fromRGB(100, 100, 150)
-inputBorder.Transparency = 0.7
-inputBorder.Thickness = 1
-inputBorder.Parent = inputContainer
-
-local inputBox = Instance.new("TextBox")
-inputBox.Name = "KeyInput"
-inputBox.Size = UDim2.new(1, -20, 1, 0)
-inputBox.Position = UDim2.new(0, 10, 0, 0)
-inputBox.BackgroundTransparency = 1
-inputBox.Text = ""
-inputBox.PlaceholderText = "Enter your key..."
-inputBox.TextColor3 = Color3.fromRGB(220, 220, 240)
-inputBox.PlaceholderColor3 = Color3.fromRGB(100, 100, 130)
-inputBox.TextScaled = true
-inputBox.Font = Enum.Font.Gotham
-inputBox.ClearTextOnFocus = false
-inputBox.Parent = inputContainer
-
--- Button container
-local buttonContainer = Instance.new("Frame")
-buttonContainer.Name = "ButtonContainer"
-buttonContainer.Size = UDim2.new(0.85, 0, 0, 45)
-buttonContainer.Position = UDim2.new(0.075, 0, 0.6, 0)
-buttonContainer.BackgroundTransparency = 1
-buttonContainer.Parent = mainFrame
-
--- Get Key button - Animated
-local getKeyBtn = Instance.new("TextButton")
-getKeyBtn.Name = "GetKeyBtn"
-getKeyBtn.Size = UDim2.new(0.45, -5, 1, 0)
-getKeyBtn.Position = UDim2.new(0, 0, 0, 0)
-getKeyBtn.BackgroundColor3 = Color3.fromRGB(50, 120, 200)
-getKeyBtn.Text = "🔗 Get Key"
-getKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-getKeyBtn.TextScaled = true
-getKeyBtn.Font = Enum.Font.GothamBold
-getKeyBtn.Parent = buttonContainer
-
-local getKeyCorner = Instance.new("UICorner")
-getKeyCorner.CornerRadius = UDim.new(0, 10)
-getKeyCorner.Parent = getKeyBtn
-
--- Check Key button - Animated
-local checkKeyBtn = Instance.new("TextButton")
-checkKeyBtn.Name = "CheckKeyBtn"
-checkKeyBtn.Size = UDim2.new(0.45, -5, 1, 0)
-checkKeyBtn.Position = UDim2.new(0.55, 0, 0, 0)
-checkKeyBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 80)
-checkKeyBtn.Text = "✅ Check"
-checkKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-checkKeyBtn.TextScaled = true
-checkKeyBtn.Font = Enum.Font.GothamBold
-checkKeyBtn.Parent = buttonContainer
-
-local checkKeyCorner = Instance.new("UICorner")
-checkKeyCorner.CornerRadius = UDim.new(0, 10)
-checkKeyCorner.Parent = checkKeyBtn
-
--- Status label (hidden by default)
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Name = "StatusLabel"
-statusLabel.Size = UDim2.new(0.9, 0, 0, 30)
-statusLabel.Position = UDim2.new(0.05, 0, 0.82, 0)
-statusLabel.BackgroundTransparency = 1
-statusLabel.Text = ""
-statusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-statusLabel.TextScaled = true
-statusLabel.Font = Enum.Font.GothamBold
-statusLabel.Visible = false
-statusLabel.Parent = mainFrame
-
--- Loading animation frame
-local loadingFrame = Instance.new("Frame")
-loadingFrame.Name = "LoadingFrame"
-loadingFrame.Size = UDim2.new(0, 30, 0, 30)
-loadingFrame.Position = UDim2.new(0.5, -15, 0.82, 0)
-loadingFrame.BackgroundColor3 = Color3.fromRGB(50, 180, 80)
-loadingFrame.BackgroundTransparency = 1
-loadingFrame.Visible = false
-loadingFrame.Parent = mainFrame
-
-local loadingCorner = Instance.new("UICorner")
-loadingCorner.CornerRadius = UDim.new(0, 15)
-loadingCorner.Parent = loadingFrame
-
--- Function to show status message
-local function showStatus(message, color, duration)
-    statusLabel.Text = message
-    statusLabel.TextColor3 = color
-    statusLabel.Visible = true
-    loadingFrame.Visible = false
-    
-    -- Clear after duration (if provided)
-    if duration then
-        task.wait(duration)
-        statusLabel.Visible = false
+task.spawn(function()
+    while GUI.Parent do
+        local t1 = TweenService:Create(glowStroke, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Transparency = 0.2})
+        t1:Play()
+        t1.Completed:Wait()
+        local t2 = TweenService:Create(glowStroke, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Transparency = 0.7})
+        t2:Play()
+        t2.Completed:Wait()
     end
-end
-
--- Loading animation - FAST version
-local function showLoading()
-    statusLabel.Visible = false
-    loadingFrame.Visible = true
-    loadingFrame.BackgroundTransparency = 0.3
-    -- Minimal animation, just flash quickly
-    task.wait(0.3)
-end
-
--- Button hover effects
-getKeyBtn.MouseEnter:Connect(function()
-    getKeyBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 220)
 end)
 
-getKeyBtn.MouseLeave:Connect(function()
-    getKeyBtn.BackgroundColor3 = Color3.fromRGB(50, 120, 200)
+-- ══════════════════════════════════════════════════════════════════════════════
+-- TOP BAR
+-- ══════════════════════════════════════════════════════════════════════════════
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 36)
+TopBar.BackgroundColor3 = T.accentDim
+TopBar.BorderSizePixel = 0
+TopBar.Parent = Main
+
+local topCorner = Instance.new("UICorner")
+topCorner.CornerRadius = UDim.new(0, 10)
+topCorner.Parent = TopBar
+
+local topFix = Instance.new("Frame")
+topFix.Size = UDim2.new(1, 0, 0, 12)
+topFix.Position = UDim2.new(0, 0, 1, -12)
+topFix.BackgroundColor3 = T.accentDim
+topFix.BorderSizePixel = 0
+topFix.Parent = TopBar
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -40, 1, 0)
+TitleLabel.Position = UDim2.new(0, 12, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "HACKING BROS"
+TitleLabel.TextColor3 = T.text
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextSize = 14
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = TopBar
+
+
+
+-- ══════════════════════════════════════════════════════════════════════════════
+-- MAIN CONTENT
+-- ══════════════════════════════════════════════════════════════════════════════
+local Content = Instance.new("Frame")
+Content.Size = UDim2.new(1, -24, 1, -48)
+Content.Position = UDim2.new(0, 12, 0, 42)
+Content.BackgroundTransparency = 1
+Content.Parent = Main
+
+local Layout = Instance.new("UIListLayout")
+Layout.SortOrder = Enum.SortOrder.LayoutOrder
+Layout.Padding = UDim.new(0, 10)
+Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+Layout.Parent = Content
+
+-- Icon area
+local IconFrame = Instance.new("Frame")
+IconFrame.Size = UDim2.new(0, 56, 0, 56)
+IconFrame.BackgroundColor3 = T.accentDim
+IconFrame.BorderSizePixel = 0
+IconFrame.LayoutOrder = 1
+IconFrame.Parent = Content
+
+local iconCorner = Instance.new("UICorner")
+iconCorner.CornerRadius = UDim.new(0, 28)
+iconCorner.Parent = IconFrame
+
+local IconLabel = Instance.new("TextLabel")
+IconLabel.Size = UDim2.new(1, 0, 1, 0)
+IconLabel.BackgroundTransparency = 1
+IconLabel.Text = "HB"
+IconLabel.TextColor3 = T.accent
+IconLabel.Font = Enum.Font.GothamBlack
+IconLabel.TextSize = 22
+IconLabel.Parent = IconFrame
+
+local iconStroke = Instance.new("UIStroke")
+iconStroke.Color = T.accent
+iconStroke.Thickness = 2
+iconStroke.Transparency = 0.3
+iconStroke.Parent = IconFrame
+
+-- Main message
+local Message = Instance.new("TextLabel")
+Message.Size = UDim2.new(1, 0, 0, 0)
+Message.AutomaticSize = Enum.AutomaticSize.Y
+Message.BackgroundTransparency = 1
+Message.Text = "JOIN THE DISCORD\nHACKING BROS\nFOR THE FULL SCRIPT"
+Message.TextColor3 = T.textAcc
+Message.Font = Enum.Font.GothamBold
+Message.TextSize = 18
+Message.TextWrapped = true
+Message.LayoutOrder = 2
+Message.Parent = Content
+
+local subMsg = Instance.new("TextLabel")
+subMsg.Size = UDim2.new(1, 0, 0, 0)
+subMsg.AutomaticSize = Enum.AutomaticSize.Y
+subMsg.BackgroundTransparency = 1
+subMsg.Text = "Access all cheats, updates & support"
+subMsg.TextColor3 = T.textDim
+subMsg.Font = Enum.Font.Gotham
+subMsg.TextSize = 12
+subMsg.LayoutOrder = 3
+subMsg.Parent = Content
+
+-- ══════════════════════════════════════════════════════════════════════════════
+-- DISCORD BUTTON
+-- ══════════════════════════════════════════════════════════════════════════════
+local JoinBtn = Instance.new("TextButton")
+JoinBtn.Size = UDim2.new(1, 0, 0, 42)
+JoinBtn.BackgroundColor3 = T.accent
+JoinBtn.Text = "JOIN DISCORD"
+JoinBtn.TextColor3 = T.text
+JoinBtn.Font = Enum.Font.GothamBold
+JoinBtn.TextSize = 15
+JoinBtn.BorderSizePixel = 0
+JoinBtn.AutoButtonColor = false
+JoinBtn.LayoutOrder = 4
+JoinBtn.Parent = Content
+
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 8)
+btnCorner.Parent = JoinBtn
+
+local btnStroke = Instance.new("UIStroke")
+btnStroke.Color = T.glow
+btnStroke.Thickness = 1
+btnStroke.Transparency = 0.5
+btnStroke.Parent = JoinBtn
+
+-- Hover effects
+JoinBtn.MouseEnter:Connect(function()
+    TweenService:Create(JoinBtn, TweenInfo.new(0.2), {BackgroundColor3 = T.glow}):Play()
+    TweenService:Create(btnStroke, TweenInfo.new(0.2), {Transparency = 0}):Play()
+end)
+JoinBtn.MouseLeave:Connect(function()
+    TweenService:Create(JoinBtn, TweenInfo.new(0.2), {BackgroundColor3 = T.accent}):Play()
+    TweenService:Create(btnStroke, TweenInfo.new(0.2), {Transparency = 0.5}):Play()
 end)
 
-checkKeyBtn.MouseEnter:Connect(function()
-    checkKeyBtn.BackgroundColor3 = Color3.fromRGB(60, 200, 90)
-end)
+-- Copy link to clipboard + feedback
+JoinBtn.MouseButton1Click:Connect(function()
+    pcall(function() setclipboard(DiscordLink) end)
 
-checkKeyBtn.MouseLeave:Connect(function()
-    checkKeyBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 80)
-end)
+    JoinBtn.Text = "LINK COPIED!"
+    JoinBtn.BackgroundColor3 = Color3.fromRGB(30, 140, 50)
 
--- Get Key button functionality
-getKeyBtn.MouseButton1Click:Connect(function()
-    -- Copy link to clipboard
-    setclipboard(LINK)
-    showStatus("✅ Link copied!", Color3.fromRGB(50, 200, 50), 1.5)
-end)
-
--- Check Key button functionality - FAST execution
-checkKeyBtn.MouseButton1Click:Connect(function()
-    local enteredKey = inputBox.Text:lower()
-    
-    if enteredKey == KEY then
-        -- Correct key - FAST loading
-        showLoading()
-        
-        -- Show success briefly
-        showStatus("✅ Loading script...", Color3.fromRGB(50, 200, 50), 0.5)
-        task.wait(0.3)
-        
-        -- Destroy GUI immediately
-        gui:Destroy()
-        
-        -- Load main script - FAST
-        local success, err = pcall(function()
-            loadstring(game:HttpGet(MAIN_SCRIPT, true))()
-        end)
-        
-        if not success then
-            warn("Failed to load main script: " .. tostring(err))
+    -- Attempt to open link
+    pcall(function()
+        if syn and syn.request then
+            syn.request({Url = DiscordLink, Method = "GET"})
+        elseif request then
+            request({Url = DiscordLink, Method = "GET"})
+        elseif http_request then
+            http_request({Url = DiscordLink, Method = "GET"})
         end
-    else
-        -- Wrong key - 5 second error message
-        showStatus("❌ Wrong key! Try again.", Color3.fromRGB(255, 50, 50), 5)
-        
-        -- Clear input
-        inputBox.Text = ""
-    end
+    end)
+
+    task.delay(2, function()
+        if JoinBtn and JoinBtn.Parent then
+            JoinBtn.Text = "JOIN DISCORD"
+            JoinBtn.BackgroundColor3 = T.accent
+        end
+    end)
 end)
 
--- Also allow pressing Enter to check key
-inputBox.FocusLost:Connect(function(enterPressed)
-    if enterPressed then
-        checkKeyBtn.MouseButton1Click:Fire()
-    end
-end)
+-- ══════════════════════════════════════════════════════════════════════════════
+-- ENTRANCE ANIMATION
+-- ══════════════════════════════════════════════════════════════════════════════
+Main.Size = UDim2.new(0, 370, 0, 0)
+Main.Position = UDim2.new(0.5, -185, 0.5, 0)
+Main.BackgroundTransparency = 0.5
 
--- Print confirmation
-print("✅ Key System loaded - FAST MODE")
-print("🔑 Key: " .. KEY)
+task.wait(0.1)
+
+local tweenIn = TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Size = UDim2.new(0, 370, 0, 260),
+    Position = UDim2.new(0.5, -185, 0.5, -130),
+    BackgroundTransparency = 0,
+})
+tweenIn:Play()
+
+print("[Hacking Bros] Discord promo loaded.")
